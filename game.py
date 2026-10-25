@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+from collections import defaultdict
 import Assets.colours as colours
 from random import choice, randint
 from math import sqrt
@@ -110,6 +111,7 @@ class Game:
         self.score_font = pygame.font.Font(None, 50)
 
         self.frame = 0
+        self.forced_keys = None #Inputs supplied through step() instead of the keyboard
     
         self.initialise_main_menu_objects()
 
@@ -439,6 +441,43 @@ class Game:
         sys.exit()
 
 
+
+
+    """
+    Agent API: start a game without the menus and advance it one fixed frame at a time, without rendering
+    """
+    def reset_game(self, seed=None):
+        """
+        Starts a new game exactly as the play button does. All the game's randomness comes from the global
+        random module, so seeding it makes the game reproducible.
+        """
+        if seed is not None:
+            random.seed(seed)
+        pygame.mixer.stop()
+        self.main_menu = False
+        self.options_menu = False
+        self.end_game = False
+        self.play_game = True
+        self.BACKGROUND_IMAGE = self.PLAY_GAME_IMAGE
+        self.fade_out_alpha = 255
+        self.frame = 1 #At least one menu frame has run before play is clicked, frame 0 means 'just jumped'
+        self.initialise_game_weights()
+        self.initialise_game_objects()
+
+    def step(self, left=False, right=False, shoot=False):
+        """
+        One frame of the main loop (handle_events, update, frame count) with the given inputs.
+        Drawing is left to the caller, it has no effect on the game state.
+        """
+        self.forced_keys = defaultdict(bool, {pygame.K_LEFT: left, pygame.K_RIGHT: right})
+        if shoot:
+            self.player.handle_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE))
+        self.update()
+        self.frame += 1
+
+    def pressed_keys(self):
+        """Keyboard state, unless the inputs were supplied through step()"""
+        return pygame.key.get_pressed() if self.forced_keys is None else self.forced_keys
 
     """
     These two class methods are specifically used to update images based on the current texture pack selected

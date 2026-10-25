@@ -156,7 +156,7 @@ class Player(pygame.sprite.Sprite):
         This function however handles any key that is held continuously whereas the handling_events function only handles a single event 
         """
         if self.handling_events and not self.dead:
-            keys = pygame.key.get_pressed()
+            keys = self.game.pressed_keys()
             mouse_buttons = pygame.mouse.get_pressed()
             
             if keys[K_LEFT]:
