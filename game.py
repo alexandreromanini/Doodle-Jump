@@ -22,6 +22,10 @@ from Sprites.ufo import UFO
 
 import texture
 
+class GameFrozen(Exception):
+    """Raised where the original game would loop forever looking for a place to spawn a tile"""
+
+
 class Game:
 
     SCREEN_WIDTH = 640
@@ -212,7 +216,10 @@ class Game:
                     return ((0, 320),   (450, 900))
                 case "Q4":
                     return ((320, 640), (450, 900))
-        def get_random_quadrant_coordinates():
+        def get_spawn_bounds():
+            """Inclusive (x_min, x_max, y_min, y_max) of the new tile's top left corner"""
+            if not top:
+                return (65, self.SCREEN_WIDTH-65, -450, self.SCREEN_HEIGHT-25)
             current_quadrant = self.quadrants[self.quadrant_idx % 4]
             x_range, y_range = get_quadrant_range(current_quadrant)
             x_lower, x_higher = x_range
@@ -239,17 +246,19 @@ class Game:
                     y_upper_bound = -20
             
                 
-            x = randint(x_lower + x_lower_bound, x_higher + x_upper_bound)
-            y = (randint((y_lower  - y_lower_bound -  900), 
-                         (y_higher  - y_upper_bound - 900)))
-        
-            return (x, y)
+            return (x_lower + x_lower_bound, x_higher + x_upper_bound,
+                    y_lower - y_lower_bound - 900, y_higher - y_upper_bound - 900)
 
         for _ in range(n):
             valid = False
+            attempts = 0
+            x_min, x_max, y_min, y_max = get_spawn_bounds()
             while not valid:
+                attempts += 1
+                if attempts % 10000 == 0 and not self.has_free_spot(x_min, x_max, y_min, y_max):
+                    raise GameFrozen(f"no free spot left for a new tile after {attempts} attempts")
                 valid = True
-                x, y = get_random_quadrant_coordinates() if top else (randint(65, self.SCREEN_WIDTH-65), randint(-450, self.SCREEN_HEIGHT-25)) 
+                x, y = randint(x_min, x_max), randint(y_min, y_max)
                 new_platform = pygame.Rect(x, y, 60, 20)
                 center1 = new_platform.center
 
@@ -264,6 +273,22 @@ class Game:
             tile_type(self, x, y)
             self.quadrant_idx += 1
 
+
+    def has_free_spot(self, x_min, x_max, y_min, y_max):
+        """
+        Whether any position in these bounds passes the spawning checks of generate_n_tiles.
+        Without one, the original game keeps drawing positions forever: it freezes.
+        """
+        import numpy as np
+        x = np.arange(x_min, x_max + 1)[:, None]
+        y = np.arange(y_min, y_max + 1)[None, :]
+        free = np.ones((x.size, y.size), dtype=bool)
+        for sprite in (self.platforms.sprites() + self.all_enemies):
+            r = sprite.rect
+            overlap = (x < r.right) & (x + 60 > r.left) & (y < r.bottom) & (y + 20 > r.top)
+            close = (x + 30 - r.centerx) ** 2 + (y + 10 - r.centery) ** 2 < 120 ** 2
+            free &= ~(overlap | close)
+        return bool(free.any())
 
     def clear_all_sprites(self):
         self.platforms.empty()
