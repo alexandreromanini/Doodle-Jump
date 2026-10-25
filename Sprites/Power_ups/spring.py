@@ -41,6 +41,7 @@ class Spring(pygame.sprite.Sprite):
     def update(self):
         self.death_check()
         self.player_collision_check()
+        self.expand_check()
 
     def player_collision_check(self):
         """ 
@@ -71,11 +72,16 @@ class Spring(pygame.sprite.Sprite):
         if self.rect.y > self.SCREEN_HEIGHT:
             self.kill()
 
-    def draw(self, screen):
+    def expand_check(self):
+        """
+        Once used the spring extends, which also moves its hitbox up.
+        This used to happen in draw(), so it is done here for the game to behave the same without rendering.
+        """
         if self.collision and not self.expanded:
             self.image = self.SPRING_EXPANDED
             self.rect.y -= 20
             self.expanded = True
 
+    def draw(self, screen):
         self.image.set_alpha(self.game.fade_out_alpha)   
         screen.blit(self.image, self.rect)
