@@ -448,8 +448,8 @@ class Game:
     """
     def reset_game(self, seed=None):
         """
-        Starts a new game exactly as the play button does. All the game's randomness comes from the global
-        random module, so seeding it makes the game reproducible.
+        Starts a new game exactly as the play button does right after launching the game. All the game's
+        randomness comes from the global random module, so seeding it makes the game reproducible.
         """
         if seed is not None:
             random.seed(seed)
@@ -461,6 +461,7 @@ class Game:
         self.BACKGROUND_IMAGE = self.PLAY_GAME_IMAGE
         self.fade_out_alpha = 255
         self.frame = 1 #At least one menu frame has run before play is clicked, frame 0 means 'just jumped'
+        self.quadrant_idx = 0 #Otherwise carried over from the previous game, as when playing again
         self.initialise_game_weights()
         self.initialise_game_objects()
 
